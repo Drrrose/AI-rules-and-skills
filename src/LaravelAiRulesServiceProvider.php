@@ -4,13 +4,14 @@ namespace Drose\LaravelAiRules;
 
 use Illuminate\Support\ServiceProvider;
 use Drose\LaravelAiRules\Console\Commands\PublishAiRulesCommand;
+use Drose\LaravelAiRules\Console\Commands\InstallAiRulesCommand;
 
 class LaravelAiRulesServiceProvider extends ServiceProvider
 {
     /**
      * Bootstrap the application services.
      */
-    public function boot()
+    public function boot(): void
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -31,7 +32,7 @@ class LaravelAiRulesServiceProvider extends ServiceProvider
     /**
      * Register the application services.
      */
-    public function register()
+    public function register(): void
     {
         $this->mergeConfigFrom(
             __DIR__.'/../config/ai-rules.php', 'ai-rules'

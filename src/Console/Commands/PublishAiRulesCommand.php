@@ -2,9 +2,9 @@
 
 namespace Drose\LaravelAiRules\Console\Commands;
 
+use Drose\LaravelAiRules\Support\PlaceholderResolver;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Str;
 
 class PublishAiRulesCommand extends Command
 {
@@ -31,7 +31,7 @@ class PublishAiRulesCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(PlaceholderResolver $resolver): int
     {
         $allFiles = config('ai-rules.files', []);
 
@@ -43,15 +43,16 @@ class PublishAiRulesCommand extends Command
             return 0;
         }
 
-        $placeholders = $this->resolvePlaceholders();
+        $placeholders = $resolver->resolve(config('ai-rules.placeholders', []));
         
-        $only = $this->option('only') ? explode(',', $this->option('only')) : [];
-        $except = $this->option('except') ? explode(',', $this->option('except')) : [];
+        $only = $this->option('only') ? array_map('trim', explode(',', $this->option('only'))) : [];
+        $except = $this->option('except') ? array_map('trim', explode(',', $this->option('except'))) : [];
         
         $filesToProcess = collect($allFiles)->filter(function ($config, $key) use ($only, $except) {
             $target = $config['target'] ?? $key;
-            $matchesOnly = empty($only) || in_array($target, $only) || in_array(basename($target), $only);
-            $matchesExcept = !empty($except) && (in_array($target, $except) || in_array(basename($target), $except));
+            // Match by exact target path or by the configuration key
+            $matchesOnly = empty($only) || in_array($target, $only) || in_array($key, $only);
+            $matchesExcept = !empty($except) && (in_array($target, $except) || in_array($key, $except));
             return $matchesOnly && !$matchesExcept;
         });
 
@@ -61,23 +62,21 @@ class PublishAiRulesCommand extends Command
         }
 
         $needsUpdate = false;
-        $stubPath = config('ai-rules.stub_path', base_path('stubs/ai-rules.stub'));
+        $defaultStubPath = config('ai-rules.stub_path', base_path('stubs/ai-rules.stub'));
+        $packageStubDir = realpath(__DIR__ . '/../../../stubs') ?: (__DIR__ . '/../../../stubs');
 
         foreach ($filesToProcess as $key => $config) {
             $target = $config['target'] ?? $key;
-            $templatePath = $config['template'] ?? $stubPath;
+            $template = $config['template'] ?? $defaultStubPath;
 
-            if (!File::exists($templatePath)) {
-                // Fallback to package stub if base_path one doesn't exist
-                $templatePath = __DIR__ . '/../../../stubs/' . basename($templatePath);
-            }
+            $templatePath = $this->resolveTemplatePath($template, $packageStubDir);
 
-            if (!File::exists($templatePath)) {
-                $this->error("Template not found for {$target}: {$templatePath}");
+            if (!$templatePath || !File::exists($templatePath)) {
+                $this->error("Template not found for {$target}: {$template}");
                 continue;
             }
 
-            $content = $this->replacePlaceholders(File::get($templatePath), $placeholders);
+            $content = $resolver->replace(File::get($templatePath), $placeholders);
             $fullPath = base_path($target);
 
             if ($this->option('check')) {
@@ -120,74 +119,27 @@ class PublishAiRulesCommand extends Command
     }
 
     /**
-     * Resolve project-specific placeholders.
+     * Resolve the absolute path to the template.
      */
-    protected function resolvePlaceholders()
+    protected function resolveTemplatePath(string $template, string $packageStubDir): ?string
     {
-        $laravel = app();
+        // 1. Check if the exact path exists
+        if (File::exists($template)) {
+            return $template;
+        }
         
-        return array_merge([
-            'project_name' => config('app.name', 'Laravel'),
-            'laravel_version' => $laravel->version(),
-            'php_version' => PHP_VERSION,
-            'test_runner' => $this->detectTestRunner(),
-            'installed_packages' => $this->getInstalledPackages(),
-        ], config('ai-rules.placeholders', []));
-    }
-
-    /**
-     * Replace placeholders in content.
-     */
-    protected function replacePlaceholders($content, $placeholders)
-    {
-        foreach ($placeholders as $key => $value) {
-            $content = str_replace("{{ {$key} }}", $value, $content);
+        // 2. If it is a simple filename like 'aider.stub', check base_path('stubs/')
+        $inBaseStubs = base_path('stubs/' . $template);
+        if (File::exists($inBaseStubs)) {
+            return $inBaseStubs;
         }
 
-        return $content;
-    }
-
-    /**
-     * Detect if Pest or PHPUnit is used.
-     */
-    protected function detectTestRunner()
-    {
-        if (File::exists(base_path('tests/Pest.php'))) {
-            return 'Pest';
+        // 3. Check the package's internal stubs directory
+        $inPackageStubs = $packageStubDir . '/' . basename($template);
+        if (File::exists($inPackageStubs)) {
+            return $inPackageStubs;
         }
 
-        return 'PHPUnit';
-    }
-
-    /**
-     * Get a list of key installed packages.
-     */
-    protected function getInstalledPackages()
-    {
-        $composerFile = base_path('composer.json');
-        if (!File::exists($composerFile)) {
-            return 'Unknown';
-        }
-
-        $composer = json_decode(File::get($composerFile), true);
-        $packages = array_merge(
-            $composer['require'] ?? [],
-            $composer['require-dev'] ?? []
-        );
-
-        $interesting = [
-            'laravel/framework',
-            'laravel/boost',
-            'spatie/guidelines-skills',
-            'inertiajs/inertia-laravel',
-            'livewire/livewire',
-            'laravel/jetstream',
-            'laravel/breeze',
-        ];
-
-        return collect($packages)
-            ->filter(fn ($v, $k) => in_array($k, $interesting))
-            ->keys()
-            ->implode(', ');
+        return null;
     }
 }

@@ -3,20 +3,8 @@
 use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
-    $this->filesToClean = [
-        '.cursorrules',
-        '.clinerules',
-        '.antigravityrules',
-        '.windsurfrules',
-        '.github/copilot-instructions.md',
-        'ai-instructions.md',
-        '.gemini-instructions.md',
-        '.boost-rules.md',
-        'CLAUDE.md',
-        '.amazonq/instructions.md',
-        '.aider.conf.yml',
-        '.continue/instructions.md',
-    ];
+    $allFiles = config('ai-rules.files', []);
+    $this->filesToClean = collect($allFiles)->map(fn($config, $key) => $config['target'] ?? $key)->values()->toArray();
 
     foreach ($this->filesToClean as $file) {
         $path = base_path($file);
@@ -24,9 +12,9 @@ beforeEach(function () {
             File::delete($path);
         }
         $dir = dirname($path);
-        if ($dir !== base_path() && File::isDirectory($dir) && count(File::files($dir)) === 0) {
+        if ($dir !== base_path() && File::isDirectory($dir) && count(File::allFiles($dir)) === 0) {
             // Only cleanup if directory is empty and not root
-            // File::deleteDirectory($dir); 
+            File::deleteDirectory($dir); 
         }
     }
 });

@@ -11,7 +11,7 @@ This package publishes optimized instruction sets to force AI agents to follow s
 - **Real-time Context**: Full integration with **Laravel Boost** (MCP server) to allow agents to run Artisan commands, Tinker, and inspect DB schemas.
 - **Architectural Excellence**: Enforces clean code patterns including Services, Actions, DTOs, Repositories, and Pipelines.
 - **Spatie Standards**: Rigorous adherence to **Spatie's Laravel Guidelines**.
-- **Modern Stack**: Optimized for PHP 8.3+, Pest/PHPUnit, AlpineJS, and Spatie Roles & Permissions.
+- **Modern Stack**: Optimized for PHP 8.2+, Pest/PHPUnit, AlpineJS, and Spatie Roles & Permissions.
 
 ## 🛠 What It Enforces
 

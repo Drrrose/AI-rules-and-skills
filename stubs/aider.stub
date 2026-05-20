@@ -14,4 +14,4 @@ model: gpt-4o
 
 read:
   - stubs/ai-rules.stub
-EOT
+

@@ -56,7 +56,7 @@ return [
         'aider' => [
             'target' => '.aider.conf.yml',
             'label' => 'Aider',
-            'template' => __DIR__.'/../stubs/aider.stub',
+            'template' => 'aider.stub',
         ],
         'continue' => [
             'target' => '.continue/instructions.md',

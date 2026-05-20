@@ -12,7 +12,7 @@ class InstallAiRulesCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'ai:rules:install';
+    protected $signature = 'ai:rules:install {--force : Overwrite existing rules files}';
 
     /**
      * The console command description.
@@ -24,7 +24,7 @@ class InstallAiRulesCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
         $this->info('Welcome to the Laravel AI Rules setup!');
 
@@ -55,8 +55,11 @@ class InstallAiRulesCommand extends Command
 
         $this->call('ai:rules', [
             '--only' => implode(',', $targets),
+            '--force' => $this->option('force'),
         ]);
 
         $this->info('Setup completed successfully!');
+
+        return 0;
     }
 }

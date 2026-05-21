@@ -20,3 +20,15 @@ agents.md
 .continue/instructions.md
 .clinerules
 ai-instructions.md
+General AI ➜ ai-instructions.md (Fallback Rules)
+.boost-mcp.json
+.guidelines-skills.json
+.boost/
+.agents/
+.ai/
+.claude/
+.gemini/
+.mcp.json
+AGENTS.md
+boost.json
+opencode.json

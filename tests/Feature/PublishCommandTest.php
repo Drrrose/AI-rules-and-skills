@@ -59,7 +59,7 @@ it('replaces placeholders in published files', function () {
 
 it('can dry-run without creating files', function () {
     $this->artisan('ai:rules --dry-run')
-         ->expectsOutputToContain('[Dry Run] would create: .cursorrules')
+         ->expectsOutputToContain('Would create')
          ->assertExitCode(0);
 
     expect(base_path('.cursorrules'))->not->toBeFile();
@@ -82,7 +82,7 @@ it('appends rules without force flag', function () {
     File::put(base_path('.cursorrules'), 'custom content');
 
     $this->artisan('ai:rules --only=.cursorrules')
-         ->expectsOutputToContain('Appended AI rules to: .cursorrules')
+         ->expectsOutputToContain('Appended')
          ->assertExitCode(0);
 
     $content = File::get(base_path('.cursorrules'));
@@ -90,7 +90,7 @@ it('appends rules without force flag', function () {
     expect($content)->not->toBe('custom content');
     // It should not duplicate if run again
     $this->artisan('ai:rules --only=.cursorrules')
-         ->expectsOutputToContain('already contains the rules')
+         ->expectsOutputToContain('Current')
          ->assertExitCode(0);
 
     $this->artisan('ai:rules --only=.cursorrules --force')

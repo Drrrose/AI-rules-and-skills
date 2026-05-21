@@ -14,61 +14,75 @@ return [
      */
     'files' => [
         'cursor' => [
+            'name' => 'Cursor',
             'target' => '.cursorrules',
-            'label' => 'Cursor',
+            'description' => 'Best for Cursor IDE',
         ],
         'claude' => [
+            'name' => 'Claude Code',
             'target' => 'CLAUDE.md',
-            'label' => 'Claude Code',
+            'description' => 'Optimized for Claude.ai',
         ],
         'antigravity' => [
+            'name' => 'Anti-Gravity',
             'target' => '.antigravityrules',
-            'label' => 'Google Anti-Gravity',
+            'description' => 'Google Anti-Gravity rules',
         ],
         'windsurf' => [
+            'name' => 'Windsurf',
             'target' => '.windsurfrules',
-            'label' => 'Windsurf',
+            'description' => 'Codeium Flow support',
         ],
         'copilot' => [
+            'name' => 'Copilot',
             'target' => '.github/copilot-instructions.md',
-            'label' => 'GitHub Copilot',
+            'description' => 'GitHub Copilot instructions',
         ],
         'gemini' => [
+            'name' => 'Gemini',
             'target' => '.gemini-instructions.md',
-            'label' => 'Gemini (Instructions)',
+            'description' => 'Agentic instructions',
         ],
         'gemini_md' => [
+            'name' => 'Gemini CLI',
             'target' => 'GEMINI.md',
-            'label' => 'Gemini CLI (GEMINI.md)',
+            'description' => 'Workspace guidelines',
         ],
         'boost' => [
+            'name' => 'Laravel Boost',
             'target' => '.boost-rules.md',
-            'label' => 'Laravel Boost (MCP)',
+            'description' => 'MCP Context rules',
         ],
         'agents' => [
+            'name' => 'AI Agents',
             'target' => 'agents.md',
-            'label' => 'Codex / AI Agents (agents.md)',
+            'description' => 'Universal Agent rules',
         ],
         'amazonq' => [
+            'name' => 'Amazon Q',
             'target' => '.amazonq/instructions.md',
-            'label' => 'Amazon Q',
+            'description' => 'Amazon Q support',
         ],
         'aider' => [
+            'name' => 'Aider',
             'target' => '.aider.conf.yml',
-            'label' => 'Aider',
+            'description' => 'CLI Pair Programmer',
             'template' => 'aider.stub',
         ],
         'continue' => [
+            'name' => 'Continue',
             'target' => '.continue/instructions.md',
-            'label' => 'Continue.dev',
+            'description' => 'Continue.dev support',
         ],
         'cline' => [
+            'name' => 'Cline',
             'target' => '.clinerules',
-            'label' => 'Cline',
+            'description' => 'Autonomous Agent rules',
         ],
         'general' => [
+            'name' => 'General AI',
             'target' => 'ai-instructions.md',
-            'label' => 'General AI Instructions',
+            'description' => 'Fallback AI rules',
         ],
     ],
 

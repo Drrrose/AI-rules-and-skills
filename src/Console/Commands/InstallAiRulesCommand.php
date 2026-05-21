@@ -3,7 +3,10 @@
 namespace Drose\LaravelAiRules\Console\Commands;
 
 use Illuminate\Console\Command;
+use function Laravel\Prompts\intro;
+use function Laravel\Prompts\outro;
 use function Laravel\Prompts\multiselect;
+use function Laravel\Prompts\info;
 
 class InstallAiRulesCommand extends Command
 {
@@ -26,27 +29,36 @@ class InstallAiRulesCommand extends Command
      */
     public function handle(): int
     {
-        $this->info('Welcome to the Laravel AI Rules setup!');
+        intro('Laravel AI Rules Setup');
 
         $allFiles = config('ai-rules.files', []);
         
+        // Calculate padding for alignment
+        $maxName = collect($allFiles)->map(fn($f) => strlen($f['name']))->max();
+        $maxTarget = collect($allFiles)->map(fn($f) => strlen($f['target']))->max();
+
         $options = [];
         foreach ($allFiles as $key => $config) {
-            $options[$key] = $config['label'] ?? $key;
+            $name = str_pad($config['name'], $maxName);
+            $target = str_pad($config['target'], $maxTarget);
+            $desc = $config['description'] ?? '';
+            
+            $options[$key] = "{$name}  ➜  {$target}  ({$desc})";
         }
 
         // Default selections: Boost, Gemini (instructions), and Gemini CLI (GEMINI.md)
         $defaults = ['boost', 'gemini', 'gemini_md'];
 
         $selected = multiselect(
-            label: 'Which AI rules would you like to publish?',
+            label: 'Select the AI Agents and guidelines to initialize:',
             options: $options,
             default: $defaults,
+            scroll: 10,
             required: true,
             hint: 'Use space to select, enter to confirm.'
         );
 
-        $this->info('Publishing selected rules...');
+        info('Publishing selected rules...');
 
         $targets = [];
         foreach ($selected as $key) {
@@ -58,10 +70,10 @@ class InstallAiRulesCommand extends Command
             '--force' => $this->option('force'),
         ]);
 
-        $this->info('Configuring Laravel Boost...');
+        info('Configuring Laravel Boost...');
         $this->call('boost:install');
 
-        $this->info('Setup completed successfully!');
+        outro('Setup completed successfully! Your AI guidelines are ready.');
 
         return 0;
     }

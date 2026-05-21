@@ -5,6 +5,12 @@ namespace Drose\LaravelAiRules\Console\Commands;
 use Drose\LaravelAiRules\Support\PlaceholderResolver;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
+use function Laravel\Prompts\spin;
+use function Laravel\Prompts\info;
+use function Laravel\Prompts\warning;
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\note;
+use function Laravel\Prompts\table;
 
 class PublishAiRulesCommand extends Command
 {
@@ -36,9 +42,9 @@ class PublishAiRulesCommand extends Command
         $allFiles = config('ai-rules.files', []);
 
         if ($this->option('list')) {
-            $this->info('Available rule targets:');
+            info('Available rule targets:');
             foreach (array_keys($allFiles) as $target) {
-                $this->line("- {$target}");
+                $this->line("  <fg=gray>•</> {$target}");
             }
             return 0;
         }
@@ -57,7 +63,7 @@ class PublishAiRulesCommand extends Command
         });
 
         if ($filesToProcess->isEmpty()) {
-            $this->warn('No files matched the specified criteria.');
+            warning('No files matched the specified criteria.');
             return 0;
         }
 
@@ -66,68 +72,77 @@ class PublishAiRulesCommand extends Command
         $packageStubDir = realpath(__DIR__ . '/../../../stubs') ?: (__DIR__ . '/../../../stubs');
 
         $publishedTargets = [];
+        $summary = [];
 
-        foreach ($filesToProcess as $key => $config) {
-            $target = $config['target'] ?? $key;
-            $template = $config['template'] ?? $defaultStubPath;
+        spin(function () use ($filesToProcess, $resolver, $placeholders, $defaultStubPath, $packageStubDir, &$publishedTargets, &$summary, &$needsUpdate) {
+            foreach ($filesToProcess as $key => $config) {
+                $target = $config['target'] ?? $key;
+                $template = $config['template'] ?? $defaultStubPath;
 
-            $templatePath = $this->resolveTemplatePath($template, $packageStubDir);
+                $templatePath = $this->resolveTemplatePath($template, $packageStubDir);
 
-            if (!$templatePath || !File::exists($templatePath)) {
-                $this->error("Template not found for {$target}: {$template}");
-                continue;
-            }
-
-            $content = $resolver->replace(File::get($templatePath), $placeholders);
-            $fullPath = base_path($target);
-
-            $existingContent = File::exists($fullPath) ? File::get($fullPath) : null;
-            $normalizedContent = trim($content);
-
-            if ($this->option('check')) {
-                if ($existingContent === null || !str_contains($existingContent, $normalizedContent)) {
-                    $this->warn("File {$target} is out of date or missing.");
-                    $needsUpdate = true;
+                if (!$templatePath || !File::exists($templatePath)) {
+                    $summary[] = ["<fg=red>✘</> {$target}", "Template not found"];
+                    continue;
                 }
-                continue;
-            }
 
-            if ($this->option('dry-run')) {
-                if ($existingContent === null) {
-                    $this->info("[Dry Run] would create: {$target}");
-                } elseif (!str_contains($existingContent, $normalizedContent)) {
-                    $this->info("[Dry Run] would append to: {$target}");
+                $content = $resolver->replace(File::get($templatePath), $placeholders);
+                $fullPath = base_path($target);
+
+                $existingContent = File::exists($fullPath) ? File::get($fullPath) : null;
+                $normalizedContent = trim($content);
+
+                if ($this->option('check')) {
+                    if ($existingContent === null || !str_contains($existingContent, $normalizedContent)) {
+                        $needsUpdate = true;
+                        $summary[] = ["<fg=yellow>!</> {$target}", "Out of date or missing"];
+                    } else {
+                        $summary[] = ["<fg=green>✔</> {$target}", "Up to date"];
+                    }
+                    continue;
+                }
+
+                if ($this->option('dry-run')) {
+                    if ($existingContent === null) {
+                        $summary[] = ["<fg=cyan>?</> {$target}", "Would create"];
+                    } elseif (!str_contains($existingContent, $normalizedContent)) {
+                        $summary[] = ["<fg=cyan>?</> {$target}", "Would append"];
+                    } else {
+                        $summary[] = ["<fg=green>✔</> {$target}", "Already up to date"];
+                    }
+                    continue;
+                }
+
+                $dir = dirname($fullPath);
+                if (!File::isDirectory($dir)) {
+                    File::makeDirectory($dir, 0755, true);
+                }
+
+                if ($existingContent !== null) {
+                    if ($this->option('force')) {
+                        File::put($fullPath, $content);
+                        $summary[] = [$target, '↻ Overwrote'];
+                        $publishedTargets[] = $target;
+                    } elseif (str_contains($existingContent, $normalizedContent)) {
+                        $summary[] = [$target, '✔ Current'];
+                        $publishedTargets[] = $target;
+                    } else {
+                        $appendContent = rtrim($existingContent) . "\n\n" . ltrim($content);
+                        File::put($fullPath, $appendContent);
+                        $summary[] = [$target, '+ Appended'];
+                        $publishedTargets[] = $target;
+                    }
                 } else {
-                    $this->info("[Dry Run] is already up to date: {$target}");
-                }
-                continue;
-            }
-
-            $dir = dirname($fullPath);
-            if (!File::isDirectory($dir)) {
-                File::makeDirectory($dir, 0755, true);
-            }
-
-            if ($existingContent !== null) {
-                if ($this->option('force')) {
                     File::put($fullPath, $content);
-                    $this->info("Overwrote AI rules in: {$target}");
-                    $publishedTargets[] = $target;
-                } elseif (str_contains($existingContent, $normalizedContent)) {
-                    $this->line("File {$target} already contains the rules.");
-                    $publishedTargets[] = $target;
-                } else {
-                    $appendContent = rtrim($existingContent) . "\n\n" . ltrim($content);
-                    File::put($fullPath, $appendContent);
-                    $this->info("Appended AI rules to: {$target}");
+                    $summary[] = [$target, '✔ Published'];
                     $publishedTargets[] = $target;
                 }
-            } else {
-                File::put($fullPath, $content);
-                $this->info("Published AI rules to: {$target}");
-                $publishedTargets[] = $target;
             }
-        }
+        }, 'Processing AI Rules...');
+
+        // Output summary table
+        $this->line('');
+        table(['File Target', 'Status'], $summary);
 
         if (!$this->option('dry-run') && !$this->option('check') && !empty($publishedTargets)) {
             $this->updateGitignore($publishedTargets);
@@ -159,6 +174,7 @@ class PublishAiRulesCommand extends Command
             '.boost-mcp.json',      // Laravel Boost MCP configuration
             '.guidelines-skills.json', // Spatie Guidelines Skills
             '.boost/',              // Laravel Boost internal directory
+            '.github/',             // GitHub workflows/config
             '.agents/',             // Generic AI Agents directory
             '.ai/',                 // Generic AI directory
             '.claude/',             // Claude specific directory
@@ -189,7 +205,7 @@ class PublishAiRulesCommand extends Command
         }
 
         File::put($gitignorePath, rtrim($content) . "\n");
-        $this->info("Updated .gitignore with the AI rules and 3rd party AI patterns.");
+        note('Updated .gitignore with AI patterns.');
     }
 
     /**

@@ -78,17 +78,23 @@ it('passes check mode when files are up to date', function () {
          ->assertExitCode(0);
 });
 
-it('does not overwrite without force flag', function () {
+it('appends rules without force flag', function () {
     File::put(base_path('.cursorrules'), 'custom content');
 
     $this->artisan('ai:rules --only=.cursorrules')
-         ->expectsOutputToContain('already exists and differs')
+         ->expectsOutputToContain('Appended AI rules to: .cursorrules')
          ->assertExitCode(0);
 
-    expect(File::get(base_path('.cursorrules')))->toBe('custom content');
+    $content = File::get(base_path('.cursorrules'));
+    expect($content)->toContain('custom content');
+    expect($content)->not->toBe('custom content');
+    // It should not duplicate if run again
+    $this->artisan('ai:rules --only=.cursorrules')
+         ->expectsOutputToContain('already contains the rules')
+         ->assertExitCode(0);
 
     $this->artisan('ai:rules --only=.cursorrules --force')
          ->assertExitCode(0);
 
-    expect(File::get(base_path('.cursorrules')))->not->toBe('custom content');
+    expect(File::get(base_path('.cursorrules')))->not->toContain('custom content');
 });

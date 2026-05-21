@@ -79,8 +79,11 @@ class PublishAiRulesCommand extends Command
             $content = $resolver->replace(File::get($templatePath), $placeholders);
             $fullPath = base_path($target);
 
+            $existingContent = File::exists($fullPath) ? File::get($fullPath) : null;
+            $normalizedContent = trim($content);
+
             if ($this->option('check')) {
-                if (!File::exists($fullPath) || File::get($fullPath) !== $content) {
+                if ($existingContent === null || !str_contains($existingContent, $normalizedContent)) {
                     $this->warn("File {$target} is out of date or missing.");
                     $needsUpdate = true;
                 }
@@ -88,8 +91,13 @@ class PublishAiRulesCommand extends Command
             }
 
             if ($this->option('dry-run')) {
-                $status = File::exists($fullPath) ? 'would update' : 'would create';
-                $this->info("[Dry Run] {$status}: {$target}");
+                if ($existingContent === null) {
+                    $this->info("[Dry Run] would create: {$target}");
+                } elseif (!str_contains($existingContent, $normalizedContent)) {
+                    $this->info("[Dry Run] would append to: {$target}");
+                } else {
+                    $this->info("[Dry Run] is already up to date: {$target}");
+                }
                 continue;
             }
 
@@ -98,16 +106,20 @@ class PublishAiRulesCommand extends Command
                 File::makeDirectory($dir, 0755, true);
             }
 
-            if (File::exists($fullPath) && !$this->option('force') && File::get($fullPath) !== $content) {
-                $this->warn("File {$target} already exists and differs. Use --force to overwrite.");
-                continue;
-            }
-
-            if (!File::exists($fullPath) || File::get($fullPath) !== $content) {
+            if ($existingContent !== null) {
+                if ($this->option('force')) {
+                    File::put($fullPath, $content);
+                    $this->info("Overwrote AI rules in: {$target}");
+                } elseif (str_contains($existingContent, $normalizedContent)) {
+                    $this->line("File {$target} already contains the rules.");
+                } else {
+                    $appendContent = rtrim($existingContent) . "\n\n" . ltrim($content);
+                    File::put($fullPath, $appendContent);
+                    $this->info("Appended AI rules to: {$target}");
+                }
+            } else {
                 File::put($fullPath, $content);
                 $this->info("Published AI rules to: {$target}");
-            } else {
-                $this->line("File {$target} is already up to date.");
             }
         }
 

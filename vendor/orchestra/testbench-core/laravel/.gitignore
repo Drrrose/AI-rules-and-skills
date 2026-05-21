@@ -4,3 +4,19 @@
 
 testbench.yaml
 testbench.yaml.backup
+
+# Laravel AI Rules
+.cursorrules
+CLAUDE.md
+.antigravityrules
+.windsurfrules
+.github/copilot-instructions.md
+.gemini-instructions.md
+GEMINI.md
+.boost-rules.md
+agents.md
+.amazonq/instructions.md
+.aider.conf.yml
+.continue/instructions.md
+.clinerules
+ai-instructions.md

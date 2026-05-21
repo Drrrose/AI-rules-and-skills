@@ -65,6 +65,8 @@ class PublishAiRulesCommand extends Command
         $defaultStubPath = config('ai-rules.stub_path', base_path('stubs/ai-rules.stub'));
         $packageStubDir = realpath(__DIR__ . '/../../../stubs') ?: (__DIR__ . '/../../../stubs');
 
+        $publishedTargets = [];
+
         foreach ($filesToProcess as $key => $config) {
             $target = $config['target'] ?? $key;
             $template = $config['template'] ?? $defaultStubPath;
@@ -110,17 +112,25 @@ class PublishAiRulesCommand extends Command
                 if ($this->option('force')) {
                     File::put($fullPath, $content);
                     $this->info("Overwrote AI rules in: {$target}");
+                    $publishedTargets[] = $target;
                 } elseif (str_contains($existingContent, $normalizedContent)) {
                     $this->line("File {$target} already contains the rules.");
+                    $publishedTargets[] = $target;
                 } else {
                     $appendContent = rtrim($existingContent) . "\n\n" . ltrim($content);
                     File::put($fullPath, $appendContent);
                     $this->info("Appended AI rules to: {$target}");
+                    $publishedTargets[] = $target;
                 }
             } else {
                 File::put($fullPath, $content);
                 $this->info("Published AI rules to: {$target}");
+                $publishedTargets[] = $target;
             }
+        }
+
+        if (!$this->option('dry-run') && !$this->option('check') && !empty($publishedTargets)) {
+            $this->updateGitignore($publishedTargets);
         }
 
         if ($this->option('check')) {
@@ -128,6 +138,50 @@ class PublishAiRulesCommand extends Command
         }
 
         return 0;
+    }
+
+    /**
+     * Update the .gitignore file to include the published rule files and 3rd party AI files.
+     */
+    protected function updateGitignore(array $targets): void
+    {
+        $gitignorePath = base_path('.gitignore');
+        
+        if (!File::exists($gitignorePath)) {
+            return;
+        }
+
+        $content = File::get($gitignorePath);
+        $header = "\n# Laravel AI Rules\n";
+        
+        // Combine our targets with common 3rd party AI files that should be ignored
+        $allPatterns = array_merge($targets, [
+            '.boost-mcp.json',      // Laravel Boost MCP configuration
+            '.guidelines-skills.json', // Spatie Guidelines Skills
+            '.boost/',              // Laravel Boost internal directory
+        ]);
+
+        $linesToAdd = [];
+        foreach ($allPatterns as $pattern) {
+            if (!str_contains($content, $pattern)) {
+                $linesToAdd[] = $pattern;
+            }
+        }
+
+        if (empty($linesToAdd)) {
+            return;
+        }
+
+        if (!str_contains($content, trim($header))) {
+            $content = rtrim($content) . "\n" . $header;
+        }
+
+        foreach ($linesToAdd as $line) {
+            $content = rtrim($content) . "\n" . $line;
+        }
+
+        File::put($gitignorePath, rtrim($content) . "\n");
+        $this->info("Updated .gitignore with the AI rules and 3rd party AI patterns.");
     }
 
     /**

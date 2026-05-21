@@ -159,6 +159,14 @@ class PublishAiRulesCommand extends Command
             '.boost-mcp.json',      // Laravel Boost MCP configuration
             '.guidelines-skills.json', // Spatie Guidelines Skills
             '.boost/',              // Laravel Boost internal directory
+            '.agents/',             // Generic AI Agents directory
+            '.ai/',                 // Generic AI directory
+            '.claude/',             // Claude specific directory
+            '.gemini/',             // Gemini specific directory
+            '.mcp.json',            // Generic MCP configuration
+            'AGENTS.md',            // Agents documentation/rules
+            'boost.json',           // Alternate Boost config
+            'opencode.json',        // OpenCode config
         ]);
 
         $linesToAdd = [];

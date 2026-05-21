@@ -58,6 +58,9 @@ class InstallAiRulesCommand extends Command
             '--force' => $this->option('force'),
         ]);
 
+        $this->info('Configuring Laravel Boost...');
+        $this->call('boost:install');
+
         $this->info('Setup completed successfully!');
 
         return 0;
